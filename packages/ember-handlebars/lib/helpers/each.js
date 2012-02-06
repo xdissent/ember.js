@@ -9,5 +9,9 @@ Ember.Handlebars.EachView = Ember.CollectionView.extend(Ember.Metamorph, {
 Ember.Handlebars.registerHelper('each', function(path, options) {
   options.hash.contentBinding = path;
   options.hash.preserveContext = true;
+
+  var view = options.data.view;
+  var groupView = view.templateData && view.templateData.groupView;
+
   return Ember.Handlebars.helpers.collection.call(this, 'Ember.Handlebars.EachView', options);
 });

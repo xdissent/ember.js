@@ -1199,8 +1199,14 @@ Ember.View = Ember.Object.extend(
     @test in createChildViews
   */
   createChildView: function(view, attrs) {
+    var props, templateData;
     if (Ember.View.detect(view)) {
-      view = view.create(attrs || {}, { _parentView: this });
+      templateData = get(this, 'templateData');
+      props = { _parentView: this };
+
+      if (templateData) { props.templateData = templateData; }
+
+      view = view.create(attrs || {}, props);
 
       var viewName = attrs && attrs.viewName || view.viewName;
 

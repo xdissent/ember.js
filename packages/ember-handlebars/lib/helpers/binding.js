@@ -22,30 +22,45 @@ var helpers = EmberHandlebars.helpers;
         fn = options.fn,
         inverse = options.inverse,
         view = data.view,
-        ctx  = this;
+        ctx  = this,
+        templateData = view.templateData || {},
+        groupView = templateData.groupView,
+        groupContext = groupView && get(groupView, 'parentView');
 
     // Set up observers for observable objects
     if ('object' === typeof this) {
-      // Create the view that will wrap the output of this template/property 
-      // and add it to the nearest view's childViews array.
-      // See the documentation of Ember._BindableSpanView for more.
-      var bindView = view.createChildView(Ember._BindableSpanView, {
-        preserveContext: preserveContext,
-        shouldDisplayFunc: shouldDisplay,
-        valueNormalizerFunc: valueNormalizer,
-        displayTemplate: fn,
-        inverseTemplate: inverse,
-        property: property,
-        previousContext: ctx,
-        isEscaped: options.hash.escaped
-      });
+      var observer;
 
-      view.appendChild(bindView);
+      if (groupView) {
+        ctx = groupContext;
 
-      /** @private */
-      var observer = function() {
-        Ember.run.once(bindView, 'rerenderIfNeeded');
-      };
+        observer = function() {
+          Ember.run.once(groupView, 'rerender');
+        };
+
+        data.buffer.push(getPath(ctx, property));
+      } else {
+        // Create the view that will wrap the output of this template/property
+        // and add it to the nearest view's childViews array.
+        // See the documentation of Ember._BindableSpanView for more.
+        var bindView = view.createChildView(Ember._BindableSpanView, {
+          preserveContext: preserveContext,
+          shouldDisplayFunc: shouldDisplay,
+          valueNormalizerFunc: valueNormalizer,
+          displayTemplate: fn,
+          inverseTemplate: inverse,
+          property: property,
+          previousContext: ctx,
+          isEscaped: options.hash.escaped
+        });
+
+        view.appendChild(bindView);
+
+        /** @private */
+        observer = function() {
+          Ember.run.once(bindView, 'rerenderIfNeeded');
+        };
+      }
 
       // Observes the given property on the context and
       // tells the Ember._BindableSpan to re-render. If property
