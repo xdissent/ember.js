@@ -45,7 +45,10 @@ module("System:run_loop() - chained binding", {
 });
 
 test("Should propagate bindings after the RunLoop completes (using Ember.RunLoop)", function() {
+  Ember.TESTING_DEPRECATION = true;
+
   Ember.RunLoop.begin();
+
     //Binding of output of MyApp.first object to input of MyApp.second object
       binding1 = Ember.Binding.from("first.output")
         .to("second.input").connect(MyApp) ;
@@ -66,6 +69,7 @@ test("Should propagate bindings after the RunLoop completes (using Ember.RunLoop
 
     //since binding has not taken into effect the value still remains as change.
     equal(MyApp.second.get("output"), "MyApp.first") ;
+
   Ember.RunLoop.end(); // allows bindings to trigger...
 
   //Value of the output variable changed to 'change'
@@ -73,28 +77,32 @@ test("Should propagate bindings after the RunLoop completes (using Ember.RunLoop
 
   //Since binding triggered after the end loop the value changed to 'change'.
   equal(MyApp.second.get("output"), "change") ;
+
+  Ember.TESTING_DEPRECATION = false;
 });
 
 test("Should propagate bindings after the RunLoop completes (using Ember.beginRunLoop)", function() {
-    //Binding of output of MyApp.first object to input of MyApp.second object
-      binding1 = Ember.Binding.from("first.output")
-        .to("second.input").connect(MyApp) ;
+  Ember.TESTING_DEPRECATION = false;
 
-    //Binding of output of MyApp.second object to input of MyApp.third object
-    binding2 = Ember.Binding.from("second.output")
-        .to("third.input").connect(MyApp) ;
+  //Binding of output of MyApp.first object to input of MyApp.second object
+  binding1 = Ember.Binding.from("first.output")
+    .to("second.input").connect(MyApp) ;
 
-    Ember.run.sync();
+  //Binding of output of MyApp.second object to input of MyApp.third object
+  binding2 = Ember.Binding.from("second.output")
+      .to("third.input").connect(MyApp) ;
 
-    //Based on the above binding if you change the output of MyApp.first object it should
-    //change the all the variable of MyApp.first,MyApp.second and MyApp.third object
-    MyApp.first.set("output", "change") ;
+  Ember.run.sync();
 
-    //Changes the output of the MyApp.first object
-    equal(MyApp.first.get("output"), "change") ;
+  //Based on the above binding if you change the output of MyApp.first object it should
+  //change the all the variable of MyApp.first,MyApp.second and MyApp.third object
+  MyApp.first.set("output", "change") ;
 
-    //since binding has not taken into effect the value still remains as change.
-    equal(MyApp.second.get("output"), "MyApp.first") ;
+  //Changes the output of the MyApp.first object
+  equal(MyApp.first.get("output"), "change") ;
+
+  //since binding has not taken into effect the value still remains as change.
+  equal(MyApp.second.get("output"), "MyApp.first") ;
   Ember.run.sync() ; // actually sets up the connection
 
   //Value of the output variable changed to 'change'
@@ -102,13 +110,18 @@ test("Should propagate bindings after the RunLoop completes (using Ember.beginRu
 
   //Since binding triggered after the end loop the value changed to 'change'.
   equal(MyApp.second.get("output"), "change") ;
+
+  Ember.TESTING_DEPRECATION = false;
 });
 
 test("Should propagate bindings after the RunLoop completes (checking invokeOnce() function)", function() {
+  Ember.TESTING_DEPRECATION = true;
+
   Ember.RunLoop.begin();
+
     //Binding of output of MyApp.first object to input of MyApp.second object
-      binding1 = Ember.Binding.from("first.output")
-        .to("second.input").connect(MyApp) ;
+    binding1 = Ember.Binding.from("first.output")
+      .to("second.input").connect(MyApp) ;
 
     //Binding of output of MyApp.second object to input of MyApp.third object
     binding2 = Ember.Binding.from("second.output")
@@ -146,4 +159,5 @@ test("Should propagate bindings after the RunLoop completes (checking invokeOnce
   //Since the invoker function is called only once the value of output did not change.
   equal(MyApp.second.get("output"), "change") ;
 
+  Ember.TESTING_DEPRECATION = false;
 });

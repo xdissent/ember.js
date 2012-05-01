@@ -1,13 +1,14 @@
+/*jshint eqeqeq:false */
+
 var set = Ember.set, get = Ember.get, getPath = Ember.getPath;
-var indexOf = Ember.ArrayUtils.indexOf;
+var indexOf = Ember.ArrayUtils.indexOf, indexesOf = Ember.ArrayUtils.indexesOf;
 
 Ember.Select = Ember.View.extend({
   tagName: 'select',
-  template: Ember.Handlebars.compile(
-    '{{#if prompt}}<option>{{prompt}}</option>{{/if}}' +
-    '{{#each content}}{{view Ember.SelectOption contentBinding="this"}}{{/each}}'
-  ),
+  defaultTemplate: Ember.Handlebars.compile('{{#if view.prompt}}<option>{{view.prompt}}</option>{{/if}}{{#each view.content}}{{view Ember.SelectOption contentBinding="this"}}{{/each}}'),
+  attributeBindings: ['multiple'],
 
+  multiple: false,
   content: null,
   selection: null,
   prompt: null,
@@ -15,7 +16,29 @@ Ember.Select = Ember.View.extend({
   optionLabelPath: 'content',
   optionValuePath: 'content',
 
-  didInsertElement: function() {
+  change: function() {
+    if (get(this, 'multiple')) {
+      this._changeMultiple();
+    } else {
+      this._changeSingle();
+    }
+  },
+
+  selectionDidChange: Ember.observer(function() {
+    var selection = get(this, 'selection'),
+        isArray = Ember.isArray(selection);
+    if (get(this, 'multiple')) {
+      if (!isArray) {
+        set(this, 'selection', Ember.A([selection]));
+        return;
+      }
+      this._selectionDidChangeMultiple();
+    } else {
+      this._selectionDidChangeSingle();
+    }
+  }, 'selection'),
+
+  _triggerChange: function() {
     var selection = get(this, 'selection');
 
     if (selection) { this.selectionDidChange(); }
@@ -23,7 +46,7 @@ Ember.Select = Ember.View.extend({
     this.change();
   },
 
-  change: function() {
+  _changeSingle: function() {
     var selectedIndex = this.$()[0].selectedIndex,
         content = get(this, 'content'),
         prompt = get(this, 'prompt');
@@ -35,7 +58,22 @@ Ember.Select = Ember.View.extend({
     set(this, 'selection', content.objectAt(selectedIndex));
   },
 
-  selectionDidChange: Ember.observer(function() {
+  _changeMultiple: function() {
+    var options = this.$('option:selected'),
+        prompt = get(this, 'prompt'),
+        offset = prompt ? 1 : 0,
+        content = get(this, 'content');
+
+    if (!content){ return; }
+    if (options) {
+      var selectedIndexes = options.map(function(){
+        return this.index - offset;
+      }).toArray();
+      set(this, 'selection', content.objectsAt(selectedIndexes));
+    }
+  },
+
+  _selectionDidChangeSingle: function() {
     var el = this.$()[0],
         content = get(this, 'content'),
         selection = get(this, 'selection'),
@@ -44,12 +82,33 @@ Ember.Select = Ember.View.extend({
 
     if (prompt) { selectionIndex += 1; }
     if (el) { el.selectedIndex = selectionIndex; }
-  }, 'selection')
+  },
+
+  _selectionDidChangeMultiple: function() {
+    var content = get(this, 'content'),
+        selection = get(this, 'selection'),
+        selectedIndexes = indexesOf(content, selection),
+        prompt = get(this, 'prompt'),
+        offset = prompt ? 1 : 0,
+        options = this.$('option');
+
+    if (options) {
+      options.each(function() {
+        this.selected = indexOf(selectedIndexes, this.index + offset) > -1;
+      });
+    }
+  },
+
+  init: function() {
+    this._super();
+    this.on("didInsertElement", this, this._triggerChange);
+  }
+
 });
 
 Ember.SelectOption = Ember.View.extend({
   tagName: 'option',
-  template: Ember.Handlebars.compile("{{label}}"),
+  defaultTemplate: Ember.Handlebars.compile("{{view.label}}"),
   attributeBindings: ['value', 'selected'],
 
   init: function() {
@@ -60,9 +119,16 @@ Ember.SelectOption = Ember.View.extend({
   },
 
   selected: Ember.computed(function() {
-    // Primitives get passed through bindings as objects... since `new Number(4) !== 4`, we use `==` below
-    return get(this, 'content') == getPath(this, 'parentView.selection');
-  }).property('content', 'parentView.selection'),
+    var content = get(this, 'content'),
+        selection = getPath(this, 'parentView.selection');
+    if (getPath(this, 'parentView.multiple')) {
+      return selection && indexOf(selection, content) > -1;
+    } else {
+      // Primitives get passed through bindings as objects... since
+      // `new Number(4) !== 4`, we use `==` below
+      return content == selection;
+    }
+  }).property('content', 'parentView.selection').volatile(),
 
   labelPathDidChange: Ember.observer(function() {
     var labelPath = getPath(this, 'parentView.optionLabelPath');

@@ -78,11 +78,9 @@ var get = Ember.get, set = Ember.set, guidFor = Ember.guidFor, none = Ember.none
 
   ## Observing changes
 
-  When using `Ember.Set`, you can observe the `"[]"` property to be
-  alerted whenever the content changes.  You can also add an enumerable
-  observer to the set to be notified of specific objects that are added and
-  removed from the set.  See `Ember.Enumerable` for more information on
-  enumerables.
+  When using `Ember.Set`, you can add an enumerable observer to the set to
+  be notified of specific objects that are added and removed from the set.
+  See `Ember.Enumerable` for more information on enumerables.
 
   This is often unhelpful. If you are filtering sets of objects, for instance,
   it is very inefficient to re-filter all of the items each time the set
@@ -141,7 +139,13 @@ Ember.Set = Ember.CoreObject.extend(Ember.MutableEnumerable, Ember.Copyable, Emb
   clear: function() {
     if (this.isFrozen) { throw new Error(Ember.FROZEN_ERROR); }
     var len = get(this, 'length');
+    var guid;
     this.enumerableContentWillChange(len, 0);
+    for (var i=0; i < len; i++){
+      guid = guidFor(this[i]);
+      delete this[guid];
+      delete this[i];
+    }
     set(this, 'length', 0);
     this.enumerableContentDidChange(len, 0);
     return this;

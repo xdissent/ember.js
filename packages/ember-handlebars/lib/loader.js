@@ -28,8 +28,6 @@ Ember.Handlebars.bootstrap = function(ctx) {
     var script = Ember.$(this),
         type   = script.attr('type');
 
-    if (type === 'text/html' && !Ember.ENV.LEGACY_HANDLEBARS_TAGS) { return; }
-
     var compile = (script.attr('type') === 'text/x-raw-handlebars') ?
                   Ember.$.proxy(Handlebars.compile, Handlebars) :
                   Ember.$.proxy(Ember.Handlebars.compile, Ember.Handlebars),
@@ -38,7 +36,7 @@ Ember.Handlebars.bootstrap = function(ctx) {
       // id if no name is found.
       templateName = script.attr('data-template-name') || script.attr('id'),
       template = compile(script.html()),
-      view, viewPath, tagName;
+      view, viewPath, elementId, tagName, options;
 
     if (templateName) {
       // For templates which have a name, we save them and then remove them from the DOM
@@ -63,14 +61,19 @@ Ember.Handlebars.bootstrap = function(ctx) {
       viewPath = script.attr('data-view');
       view = viewPath ? Ember.getPath(viewPath) : Ember.View;
 
+      // Get the id of the script, used by Ember.View's elementId property,
+      // Look for data-element-id attribute.
+      elementId = script.attr('data-element-id');
+
       // Users can optionally specify a custom tag name to use by setting the
       // data-tag-name attribute on the script tag.
       tagName = script.attr('data-tag-name');
 
-      view = view.create({
-        template: template,
-        tagName: (tagName) ? tagName : undefined
-      });
+      options = { template: template };
+      if (elementId) { options.elementId = elementId; }
+      if (tagName)   { options.tagName   = tagName; }
+
+      view = view.create(options);
 
       view._insertElementLater(function() {
         script.replaceWith(this.$());

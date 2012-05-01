@@ -1,5 +1,3 @@
-require('ember-states/state_manager');
-
 var get = Ember.get, set = Ember.set, getPath = Ember.getPath, setPath = Ember.setPath;
 
 var stateManager, loadingState, loadedState, stateEventStub = {
@@ -250,21 +248,6 @@ test("it automatically transitions to multiple substates specified using either 
   ok(get(stateManager, 'currentState').isStart, "automatically transitions to final substate");
 });
 
-test("it reports the view associated with the current view state, if any", function() {
-  var view = Ember.View.create();
-
-  stateManager = Ember.StateManager.create({
-    foo: Ember.ViewState.create({
-      view: view,
-      bar: Ember.State.create()
-    })
-  });
-
-  stateManager.goToState('foo.bar');
-
-  equal(get(stateManager, 'currentView'), view, "returns nearest parent view state's view");
-});
-
 module("Ember.StateManager - Transitions on Complex State Managers");
 
 /**
@@ -345,7 +328,7 @@ test("it sends exit events in the correct order when changing to a state multipl
   stateManager.goToState('start.outer.inner');
   stateManager.goToState('start');
   stateManager.goToState('start.outer.inner');
-  exitOrder = []
+  exitOrder = [];
   stateManager.goToState('start');
   equal(exitOrder.length, 2, "precond - it calls both exits");
   equal(exitOrder[0], 'exitedInner', "inner exit is called first");
@@ -463,9 +446,9 @@ test("goToState triggers all enter states", function() {
 test("goToState with current state does not trigger enter or exit", function() {
   stateManager.goToState('grandparent.parent.child');
   stateManager.goToState('grandparent.parent.child');
-  equals(stateManager.grandparent.entered, 1, "the top level should only be entered once");
-  equals(stateManager.grandparent.parent.entered, 1, "intermediate states should only be entered once");
-  equals(stateManager.grandparent.parent.child.entered, 1, "the final state should only be entered once");
-  equals(stateManager.grandparent.parent.child.exited, 0, "the final state should not be exited");
+  equal(stateManager.grandparent.entered, 1, "the top level should only be entered once");
+  equal(stateManager.grandparent.parent.entered, 1, "intermediate states should only be entered once");
+  equal(stateManager.grandparent.parent.child.entered, 1, "the final state should only be entered once");
+  equal(stateManager.grandparent.parent.child.exited, 0, "the final state should not be exited");
 });
 

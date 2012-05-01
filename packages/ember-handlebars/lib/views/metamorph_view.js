@@ -9,6 +9,8 @@ var DOMManager = {
   remove: function(view) {
     var morph = view.morph;
     if (morph.isRemoved()) { return; }
+    set(view, 'element', null);
+    view._lastInsert = null;
     morph.remove();
   },
 
@@ -24,7 +26,7 @@ var DOMManager = {
     nextView._insertElementLater(function() {
       var morph = view.morph;
       morph.after(nextView.outerHTML);
-      nextView,outerHTML = null;
+      nextView.outerHTML = null;
     });
   },
 
@@ -43,6 +45,10 @@ var DOMManager = {
       view.transitionTo('inDOM');
       view._notifyDidInsertElement();
     });
+  },
+
+  empty: function(view) {
+    view.morph.html("");
   }
 };
 

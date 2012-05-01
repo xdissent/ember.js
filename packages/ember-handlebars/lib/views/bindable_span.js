@@ -84,18 +84,19 @@ Ember._BindableSpanView = Ember.View.extend(Ember.Metamorph,
     var property = get(this, 'property'),
         context  = get(this, 'previousContext'),
         valueNormalizer = get(this, 'valueNormalizerFunc'),
-        result;
+        result, templateData;
 
     // Use the current context as the result if no
     // property is provided.
     if (property === '') {
       result = context;
     } else {
-      result = getPath(context, property);
+      templateData = get(this, 'templateData');
+      result = getPath(context, property, { data: templateData });
     }
 
     return valueNormalizer ? valueNormalizer(result) : result;
-  }).property('property', 'previousContext', 'valueNormalizerFunc'),
+  }).property('property', 'previousContext', 'valueNormalizerFunc').volatile(),
 
   rerenderIfNeeded: function() {
     if (!get(this, 'isDestroyed') && get(this, 'normalizedValue') !== this._lastNormalizedValue) {
@@ -142,18 +143,18 @@ Ember._BindableSpanView = Ember.View.extend(Ember.Metamorph,
       // If we are preserving the context (for example, if this
       // is an #if block, call the template with the same object.
       if (preserveContext) {
-        set(this, 'templateContext', context);
+        set(this, '_templateContext', context);
       } else {
       // Otherwise, determine if this is a block bind or not.
       // If so, pass the specified object to the template
         if (displayTemplate) {
-          set(this, 'templateContext', result);
+          set(this, '_templateContext', result);
         } else {
         // This is not a bind block, just push the result of the
         // expression to the render context and return.
           if (result === null || result === undefined) {
             result = "";
-          } else {
+          } else if (!(result instanceof Handlebars.SafeString)) {
             result = String(result);
           }
 
@@ -166,9 +167,9 @@ Ember._BindableSpanView = Ember.View.extend(Ember.Metamorph,
       set(this, 'template', inverseTemplate);
 
       if (preserveContext) {
-        set(this, 'templateContext', context);
+        set(this, '_templateContext', context);
       } else {
-        set(this, 'templateContext', result);
+        set(this, '_templateContext', result);
       }
     } else {
       set(this, 'template', function() { return ''; });

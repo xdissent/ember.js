@@ -13,17 +13,19 @@
         "equal",
         "test",
         "testBoth",
+        "testWithDefault",
         "raises",
         "deepEqual",
         "start",
         "stop",
         "ok",
         "strictEqual",
-        "module"
+        "module",
+        "expect",
+        "minispade"
     ],
 
     "node" : false,
-    "es5" : true,
     "browser" : true,
 
     "boss" : true,

@@ -109,17 +109,25 @@ Ember.Observable = Ember.Mixin.create(/** @scope Ember.Observable.prototype */ {
 
   /**
     To get multiple properties at once, call getProperties
-    with a list of strings:
+    with a list of strings or an array:
 
           record.getProperties('firstName', 'lastName', 'zipCode'); // => { firstName: 'John', lastName: 'Doe', zipCode: '10011' }
 
-    @param {String...} list of keys to get
+   is equivalent to:
+
+          record.getProperties(['firstName', 'lastName', 'zipCode']); // => { firstName: 'John', lastName: 'Doe', zipCode: '10011' }
+
+    @param {String...|Array} list of keys to get
     @returns {Hash}
   */
   getProperties: function() {
     var ret = {};
-    for(var i = 0; i < arguments.length; i++) {
-      ret[arguments[i]] = get(this, arguments[i]);
+    var propertyNames = arguments;
+    if (arguments.length === 1 && Ember.typeOf(arguments[0]) === 'array') {
+      propertyNames = arguments[0];
+    }
+    for(var i = 0; i < propertyNames.length; i++) {
+      ret[propertyNames[i]] = get(this, propertyNames[i]);
     }
     return ret;
   },
@@ -145,7 +153,7 @@ Ember.Observable = Ember.Mixin.create(/** @scope Ember.Observable.prototype */ {
     If you try to set a value on a key that is undefined in the target
     object, then the unknownProperty() handler will be called instead. This
     gives you an opportunity to implement complex "virtual" properties that
-    are not predefined on the obejct. If unknownProperty() returns
+    are not predefined on the object. If unknownProperty() returns
     undefined, then set() will simply set the value on the object.
 
     ### Property Observers
@@ -156,7 +164,7 @@ Ember.Observable = Ember.Mixin.create(/** @scope Ember.Observable.prototype */ {
     observers (i.e. observer methods declared on the same object), will be
     called immediately. Any "remote" observers (i.e. observer methods
     declared on another object) will be placed in a queue and called at a
-    later time in a coelesced manner.
+    later time in a coalesced manner.
 
     ### Chaining
 
@@ -184,13 +192,7 @@ Ember.Observable = Ember.Mixin.create(/** @scope Ember.Observable.prototype */ {
     @returns {Ember.Observable}
   */
   setProperties: function(hash) {
-    var self = this;
-    Ember.changeProperties(function(){
-      for(var prop in hash) {
-        if (hash.hasOwnProperty(prop)) set(self, prop, hash[prop]);
-      }
-    });
-    return this;
+    return Ember.setProperties(this, hash);
   },
 
   /**
@@ -199,9 +201,9 @@ Ember.Observable = Ember.Mixin.create(/** @scope Ember.Observable.prototype */ {
     You can use this method to group property changes so that notifications
     will not be sent until the changes are finished. If you plan to make a
     large number of changes to an object at one time, you should call this
-    method at the beginning of the changes to suspend change notifications.
-    When you are done making changes, call endPropertyChanges() to allow
-    notification to resume.
+    method at the beginning of the changes to begin deferring change
+    notifications. When you are done making changes, call endPropertyChanges()
+    to deliver the deferred change notifications and end deferring.
 
     @returns {Ember.Observable}
   */
@@ -216,9 +218,9 @@ Ember.Observable = Ember.Mixin.create(/** @scope Ember.Observable.prototype */ {
     You can use this method to group property changes so that notifications
     will not be sent until the changes are finished. If you plan to make a
     large number of changes to an object at one time, you should call
-    beginPropertyChanges() at the beginning of the changes to suspend change
-    notifications. When you are done making changes, call this method to allow
-    notification to resume.
+    beginPropertyChanges() at the beginning of the changes to defer change
+    notifications. When you are done making changes, call this method to
+    deliver the deferred change notifications and end deferring.
 
     @returns {Ember.Observable}
   */
@@ -337,7 +339,7 @@ Ember.Observable = Ember.Mixin.create(/** @scope Ember.Observable.prototype */ {
     @param {String} key The key to observer
     @param {Object} target The target object to invoke
     @param {String|Function} method The method to invoke.
-    @returns {Ember.Observable} reciever
+    @returns {Ember.Observable} receiver
   */
   removeObserver: function(key, target, method) {
     Ember.removeObserver(this, key, target, method);
@@ -474,11 +476,23 @@ Ember.Observable = Ember.Mixin.create(/** @scope Ember.Observable.prototype */ {
     return get(this, keyName);
   },
 
+  /**
+    Returns the cached value of a computed property, if it exists.
+    This allows you to inspect the value of a computed property
+    without accidentally invoking it if it is intended to be
+    generated lazily.
+
+    @param {String} keyName
+    @returns {Object} The cached value of the computed property, if any
+  */
+  cacheFor: function(keyName) {
+    return Ember.cacheFor(this, keyName);
+  },
+
   /** @private - intended for debugging purposes */
   observersForKey: function(keyName) {
     return Ember.observersFor(this, keyName);
   }
-
 });
 
 

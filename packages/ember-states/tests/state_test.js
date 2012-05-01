@@ -1,5 +1,3 @@
-require('ember-states/state');
-
 var get = Ember.get, set = Ember.set, getPath = Ember.getPath, setPath = Ember.setPath;
 
 module("Ember.State");
@@ -13,7 +11,7 @@ test("creating a state with substates sets the parentState property", function()
     child: Ember.State.create()
   });
 
-  ok(state.getPath('child.parentState'), state, "A child state gets its parent state");
+  equal(state.getPath('child.parentState'), state, "A child state gets its parent state");
 });
 
 test("a state is passed its state manager when receiving an enter event", function() {

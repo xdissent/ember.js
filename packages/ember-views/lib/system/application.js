@@ -33,7 +33,6 @@ var get = Ember.get, set = Ember.set;
   You only need to specify the root if your page contains multiple instances
   of Ember.Application.
 
-  @since Ember 2.0
   @extends Ember.Object
 */
 Ember.Application = Ember.Namespace.extend(
@@ -82,8 +81,39 @@ Ember.Application = Ember.Namespace.extend(
         self.didBecomeReady();
       });
     }
+  },
 
-    this._super();
+  /**
+    Instantiate all controllers currently available on the namespace
+    and inject them onto a state manager.
+
+    Example:
+
+      App.PostsController = Ember.ArrayController.create();
+      App.CommentsController = Ember.ArrayController.create();
+
+      var stateManager = Ember.StateManager.create({
+        ...
+      });
+
+      App.injectControllers(stateManager);
+
+      stateManager.get('postsController')     // <App.PostsController:ember1234>
+      stateManager.get('commentsController')  // <App.CommentsController:ember1235>
+
+      stateManager.getPath('postsController.stateManager') // stateManager
+  */
+  injectControllers: function(stateManager) {
+    var properties = Ember.A(Ember.keys(this)),
+        namespace = this, controller, name;
+
+    properties.forEach(function(property) {
+      if (!/^[A-Z].*Controller$/.test(property)) { return; }
+      name = property[0].toLowerCase() + property.substr(1);
+      controller = namespace[property].create();
+      stateManager.set(name, controller);
+      controller.set('stateManager', stateManager);
+    });
   },
 
   /** @private */

@@ -148,19 +148,21 @@ function getPathWithGlobals(obj, path) {
 }
 
 /** @private */
-function getFromValue(obj, binding) {
-  var operation = binding._operation;
-
+function getTransformedFromValue(obj, binding) {
+  var operation = binding._operation,
+      fromValue;
   if (operation) {
-    return operation(obj, binding._from, binding._operand);
+    fromValue = operation(obj, binding._from, binding._operand);
   } else {
-    return getPathWithGlobals(obj, binding._from);
+    fromValue = getPathWithGlobals(obj, binding._from);
   }
+  return getTransformedValue(binding, fromValue, obj, 'to');
 }
 
 /** @private */
-function getToValue(obj, binding) {
-  return getPath(obj, binding._to);
+function getTransformedToValue(obj, binding) {
+  var toValue = getPath(obj, binding._to);
+  return getTransformedValue(binding, toValue, obj, 'from');
 }
 
 /** @private */
@@ -176,7 +178,6 @@ var OR_OPERATION = function(obj, left, right) {
 // ..........................................................
 // BINDING
 //
-
 /** @private */
 var K = function() {};
 
@@ -197,15 +198,35 @@ var Binding = function(toPath, fromPath) {
   self._from = fromPath;
   self._to   = toPath;
 
-  /** @private */
-  self._cache = {};
-
   return self;
 };
 
 K.prototype = Binding.prototype;
 
 Binding.prototype = /** @scope Ember.Binding.prototype */ {
+  /**
+    This copies the Binding so it can be connected to another object.
+    @returns {Ember.Binding}
+  */
+  copy: function () {
+    var copy = new Binding(this._to, this._from);
+    if (this._oneWay) {
+      copy._oneWay = true;
+    }
+    if (this._transforms) {
+      copy._transforms = this._transforms.slice(0);
+    }
+    if (this._typeTransform) {
+      copy._typeTransform = this._typeTransform;
+      copy._placeholder = this._placeholder;
+    }
+    if (this._operand) {
+      copy._operand = this._operand;
+      copy._operation = this._operation;
+    }
+    return copy;
+  },
+
   // ..........................................................
   // CONFIG
   //
@@ -229,7 +250,7 @@ Binding.prototype = /** @scope Ember.Binding.prototype */ {
 
   /**
     This will set the "to" property path to the specified value. It will not
-    attempt to reoslve this property path to an actual object until you
+    attempt to resolve this property path to an actual object until you
     connect the binding.
 
     The binding will search for the property path starting at the root object
@@ -532,55 +553,32 @@ Binding.prototype = /** @scope Ember.Binding.prototype */ {
     // synchronizing from
     var guid = guidFor(obj), direction = this[guid];
 
-    var fromPath = this._from, toPath = this._to, lastSet;
+    var fromPath = this._from, toPath = this._to;
 
     delete this[guid];
 
-    if (direction === 'fwd') {
-      lastSet = this._cache.back;
-    } else if (direction === 'back') {
-      lastSet = this._cache.fwd;
-    }
-
-    var fromValue, toValue;
-
-    // There's a bit of duplicate logic here, but the order is important.
-    //
-    // We want to avoid ping-pong bindings. To do this, we store off the
-    // guid of the item we are setting. Later, we avoid synchronizing
-    // bindings in the other direction if the raw value we are copying
-    // is the same as the guid of the last thing we set.
-    //
-    // Use guids here to avoid unnecessarily holding hard references
-    // to objects.
-    if (direction === 'fwd') {
-      fromValue = getFromValue(obj, this);
-      if (this._cache.back === guidFor(fromValue)) { return; }
-      this._cache.fwd = guidFor(fromValue);
-
-      toValue = getToValue(obj, this);
-    } else if (direction === 'back') {
-      toValue = getToValue(obj, this);
-      if (this._cache.fwd === guidFor(toValue)) { return; }
-      this._cache.back = guidFor(toValue);
-
-      fromValue = getFromValue(obj, this);
-    }
-
-    fromValue = getTransformedValue(this, fromValue, obj, 'to');
-    toValue = getTransformedValue(this, toValue, obj, 'from');
-
-    if (toValue === fromValue) { return; }
-
     // if we're synchronizing from the remote object...
     if (direction === 'fwd') {
-      if (log) { Ember.Logger.log(' ', this.toString(), toValue, '->', fromValue, obj); }
-      Ember.trySetPath(Ember.isGlobalPath(toPath) ? window : obj, toPath, fromValue);
-
+      var fromValue = getTransformedFromValue(obj, this);
+      if (log) {
+        Ember.Logger.log(' ', this.toString(), '->', fromValue, obj);
+      }
+      if (this._oneWay) {
+        Ember.trySetPath(Ember.isGlobalPath(toPath) ? window : obj, toPath, fromValue);
+      } else {
+        Ember._suspendObserver(obj, toPath, this, this.toDidChange, function () {
+          Ember.trySetPath(Ember.isGlobalPath(toPath) ? window : obj, toPath, fromValue);
+        });
+      }
     // if we're synchronizing *to* the remote object
     } else if (direction === 'back') {// && !this._oneWay) {
-      if (log) { Ember.Logger.log(' ', this.toString(), toValue, '<-', fromValue, obj); }
-      Ember.trySetPath(Ember.isGlobalPath(fromPath) ? window : obj, fromPath, toValue);
+      var toValue = getTransformedToValue(obj, this);
+      if (log) {
+        Ember.Logger.log(' ', this.toString(), '<-', toValue, obj);
+      }
+      Ember._suspendObserver(obj, fromPath, this, this.fromDidChange, function () {
+        Ember.trySetPath(Ember.isGlobalPath(fromPath) ? window : obj, fromPath, toValue);
+      });
     }
   }
 
@@ -625,9 +623,9 @@ mixinProperties(Binding,
   /**
     @see Ember.Binding.prototype.single
   */
-  single: function(from) {
+  single: function(from, placeholder) {
     var C = this, binding = new C(null, from);
-    return binding.single();
+    return binding.single(placeholder);
   },
 
   /**
@@ -641,8 +639,12 @@ mixinProperties(Binding,
   /**
     @see Ember.Binding.prototype.transform
   */
-  transform: function(func) {
-    var C = this, binding = new C();
+  transform: function(from, func) {
+    if (!func) {
+      func = from;
+      from = null;
+    }
+    var C = this, binding = new C(null, from);
     return binding.transform(func);
   },
 
@@ -653,6 +655,15 @@ mixinProperties(Binding,
     var C = this, binding = new C(null, from);
     return binding.notEmpty(placeholder);
   },
+
+  /**
+    @see Ember.Binding.prototype.notNull
+  */
+  notNull: function(from, placeholder) {
+    var C = this, binding = new C(null, from);
+    return binding.notNull(placeholder);
+  },
+
 
   /**
     @see Ember.Binding.prototype.bool
@@ -668,6 +679,14 @@ mixinProperties(Binding,
   not: function(from) {
     var C = this, binding = new C(null, from);
     return binding.not();
+  },
+
+  /**
+    @see Ember.Binding.prototype.isNull
+  */
+  isNull: function(from) {
+    var C = this, binding = new C(null, from);
+    return binding.isNull();
   },
 
   /**

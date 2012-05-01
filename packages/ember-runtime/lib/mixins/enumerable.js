@@ -109,7 +109,7 @@ Ember.Enumerable = Ember.Mixin.create( /** @lends Ember.Enumerable */ {
     reaches the your current length-1.  If you run out of data before this
     time for some reason, you should simply return undefined.
 
-    The default impementation of this method simply looks up the index.
+    The default implementation of this method simply looks up the index.
     This works great on any Array-like objects.
 
     @param index {Number} the current index of the iteration
@@ -146,7 +146,7 @@ Ember.Enumerable = Ember.Mixin.create( /** @lends Ember.Enumerable */ {
     ret = this.nextObject(0, null, context);
     pushCtx(context);
     return ret ;
-  }).property(),
+  }).property().volatile(),
 
   /**
     Helper method returns the last object from a collection. If your enumerable
@@ -175,7 +175,7 @@ Ember.Enumerable = Ember.Mixin.create( /** @lends Ember.Enumerable */ {
       pushCtx(context);
       return last;
     }
-  }).property(),
+  }).property().volatile(),
 
   /**
     Returns true if the passed object can be found in the receiver.  The
@@ -734,7 +734,7 @@ Ember.Enumerable = Ember.Mixin.create( /** @lends Ember.Enumerable */ {
 
     @param {Enumerable} removes
       optional enumerable containing items that were removed from the set.
-      For ordered enumerables, this hsould be an ordered array of items. If
+      For ordered enumerables, this should be an ordered array of items. If
       no items were removed you can pass null.
 
     @returns {Object} receiver

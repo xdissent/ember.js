@@ -150,7 +150,7 @@ var EMPTY_META = {
 
 if (Object.freeze) Object.freeze(EMPTY_META);
 
-var createMeta = Ember.platform.defineProperty.isSimulated ? o_create : function(meta) { return meta; };
+var createMeta = Ember.platform.defineProperty.isSimulated ? o_create : (function(meta) { return meta; });
 
 /**
   @private
@@ -302,8 +302,6 @@ Ember.wrap = function(func, superFunc) {
 };
 
 /**
-  @function
-
   Returns true if the passed object is an array or Array-like.
 
   Ember Array Protocol:
@@ -314,6 +312,10 @@ Ember.wrap = function(func, superFunc) {
 
   Unlike Ember.typeOf this method returns true even if the passed object is
   not formally array but appears to be array-like (i.e. implements Ember.Array)
+
+      Ember.isArray(); // false
+      Ember.isArray([]); // true
+      Ember.isArray( Ember.ArrayProxy.create({ content: [] }) ); // true
 
   @param {Object} obj The object to test
   @returns {Boolean}
@@ -330,6 +332,15 @@ Ember.isArray = function(obj) {
   Forces the passed object to be part of an array.  If the object is already
   an array or array-like, returns the object.  Otherwise adds the object to
   an array.  If obj is null or undefined, returns an empty array.
+
+      Ember.makeArray();          => []
+      Ember.makeArray(null);      => []
+      Ember.makeArray(undefined); => []
+      Ember.makeArray('lindsay'); => ['lindsay'] 
+      Ember.makeArray([1,2,42]);  => [1,2,42]
+
+      var controller = Ember.ArrayProxy.create({ content: [] });
+      Ember.makeArray(controller) === controller;   => true
 
   @param {Object} obj the object
   @returns {Array}

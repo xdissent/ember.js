@@ -28,8 +28,8 @@ var get = Ember.get, set = Ember.set, forEach = Ember.ArrayUtils.forEach;
   can be applied only to a collection that keeps its items in an ordered set.
 
   Note that an Array can change even if it does not implement this mixin.
-  For example, a SparyArray may not be directly modified but if its
-  underlying enumerable changes, it will change also.
+  For example, one might implement a SparseArray that cannot be directly
+  modified, but if its underlying enumerable changes, it will change also.
 
   @extends Ember.Mixin
   @extends Ember.Array
@@ -41,7 +41,7 @@ Ember.MutableArray = Ember.Mixin.create(Ember.Array, Ember.MutableEnumerable,
   /**
     __Required.__ You must implement this method to apply this mixin.
 
-    This is one of the primitves you must implement to support Ember.Array.  You
+    This is one of the primitives you must implement to support Ember.Array.  You
     should replace amt objects started at idx with the objects in the passed
     array.  You should also call this.enumerableContentDidChange() ;
 
@@ -58,6 +58,24 @@ Ember.MutableArray = Ember.Mixin.create(Ember.Array, Ember.MutableEnumerable,
       at *idx*
   */
   replace: Ember.required(),
+
+  /**
+    Remove all elements from self. This is useful if you
+    want to reuse an existing array without having to recreate it.
+
+        var colors = ["red", "green", "blue"];
+        color.length();  => 3
+        colors.clear();  => []
+        colors.length(); => 0
+
+    @returns {Ember.Array} An empty Array. 
+  */
+  clear: function () {
+    var len = get(this, 'length');
+    if (len === 0) return this;
+    this.replace(0, len, EMPTY);
+    return this;
+  },
 
   /**
     This will use the primitive replace() method to insert an object at the
